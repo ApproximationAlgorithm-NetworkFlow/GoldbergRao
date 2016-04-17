@@ -1,0 +1,6 @@
+#No Of Graphs #No of Lines in the graph #FromNode ToNode Capacity
+1
+2
+1 2 1
+2 1 3
+
