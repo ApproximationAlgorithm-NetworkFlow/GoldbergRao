@@ -1,11 +1,12 @@
 package com.goldberg;
 
 public class FlowEdge {
-	private int fromNode, toNode; // from and to
-	private double capacity; // capacity is final as it will not change once initialized
-	private double flow; // flow
+	private Node fromNode, toNode; // from and to
+	private int capacity = 0; // capacity is final as it will not change once initialized
+	private int flow = 0; // flow
+	private int residualCapacity = 0; // flow
 
-	public FlowEdge(int v, int w, double capacity) {
+	public FlowEdge(Node v, Node w, int capacity) {
 		if (this.capacity < 0)
 			throw new RuntimeException("Negative edge capacity");
 		this.fromNode = v;
@@ -14,7 +15,8 @@ public class FlowEdge {
 		this.flow = 0;
 	}
 
-	public FlowEdge(int v, int w, double capacity, double flow) {
+	
+	public FlowEdge(Node v, Node w, int capacity, int flow) {
 		if (capacity < 0)
 			throw new RuntimeException("Negative edge capacity");
 		this.fromNode = v;
@@ -32,14 +34,7 @@ public class FlowEdge {
 			throw new RuntimeException("endpoint not correct");
 	}
 
-	public double residualCapacityTo(int vertex) {
-		if (vertex == fromNode)
-			return flow;
-		else if (vertex == toNode)
-			return capacity - flow;
-		else
-			throw new IllegalArgumentException();
-	}
+	
 
 	public void addResidualFlowTo(int vertex, double delta) {
 		if (vertex == fromNode)
@@ -50,23 +45,33 @@ public class FlowEdge {
 			throw new IllegalArgumentException();
 	}
 	 */
-	public double getResidualCapacity() {
-		return capacity - flow;
+	
+	public void updateFlow(int flow) {
+		this.flow += flow; 
+		updateResidualCapacity(this.flow);
+	}
+	
+	private void updateResidualCapacity(int newFlow) {
+		this.residualCapacity = capacity - newFlow;		
 	}
 
-	public int getFromNode() {
+	public int getResidualCapacity() {
+		return residualCapacity;
+	}
+
+	public Node getFromNode() {
 		return fromNode;
 	}
 
-	public int getToNode() {
+	public Node getToNode() {
 		return toNode;
 	}
 
-	public double getCapacity() {
+	public int getCapacity() {
 		return capacity;
 	}
 
-	public void setCapacity(double capacity) {
+	public void setCapacity(int capacity) {
 		this.capacity = capacity;
 	}
 
@@ -74,14 +79,11 @@ public class FlowEdge {
 		return flow;
 	}
 
-	public void setFlow(double flow) {
-		this.flow = flow;
-	}
 	@Override
 	public String toString() {
 		StringBuilder buider = new StringBuilder();
-		buider.append("From-Node: ").append(getFromNode());
-		buider.append("  To-Node: ").append(getToNode());
+		buider.append("From-Node: ").append(getFromNode().getValue());
+		buider.append("  To-Node: ").append(getToNode().getValue());
 		buider.append("  Capacity: ").append(getCapacity());
 		if(flow != 0){
 			buider.append("  Flow: ").append(getFlow());

@@ -1,12 +1,19 @@
 package com.goldberg;	
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 
 public class FlowNetwork {
 	private int V;
 	private int E;
 	private Bag<FlowEdge>[] adj;
-	private HashMap<String, FlowEdge> edgeToIdMap = new HashMap<String, FlowEdge>();
+	//SrcNode to Edge Map
+	private HashMap<Node, FlowEdge> edgeToIdMap = new HashMap<Node, FlowEdge>();
+	private HashSet<Node> nodes = new HashSet<Node>();
+	private Node sourceNode;
+	private Node sinkNode;
 
 	// Empty Graph
 	public FlowNetwork() {
@@ -24,7 +31,7 @@ public class FlowNetwork {
 			adj[v] = new Bag<FlowEdge>();
 	}
 	// random graph with V vertices and E edges
-	public FlowNetwork(int V, int E) {
+	/*public FlowNetwork(int V, int E) {
 		this(V);
 		for (int i = 0; i < E; i++) {
 			int v = StdRandom.uniform(V);
@@ -33,17 +40,22 @@ public class FlowNetwork {
 			addEdge(new FlowEdge(v, w, capacity));
 		}
 	}
-
+*/
 	public void addEdge(FlowEdge e) throws IllegalArgumentException {
 		E++;
 		// adj[v].add(e);
 		// adj[w].add(e);
-		String key = String.valueOf(e.getFromNode()) + "-"
-				+ String.valueOf(e.getToNode());
-		if (edgeToIdMap.get(key) != null) {
+		
+		/*if (edgeToIdMap.get(e.getFromNode()) != null) {
 			throw new IllegalArgumentException("Edge already exists");
-		}
-		edgeToIdMap.put(key, e);
+		}*/
+		
+		
+		nodes.add(e.getFromNode());
+		nodes.add(e.getToNode());
+		e.getFromNode().addOutEdge(e);
+		e.getToNode().addInEdge(e);
+		edgeToIdMap.put(e.getFromNode(), e);
 
 	}
 	public FlowEdge getEdge(int s, int t)
@@ -69,8 +81,8 @@ public class FlowNetwork {
 		return E; 
 	}
 	// return list of all edges - excludes self loops
-	public Iterable<FlowEdge> edges() {
-		Bag<FlowEdge> list = new Bag<FlowEdge>();
+	public Collection<FlowEdge> edges() {
+		ArrayList<FlowEdge> list = new ArrayList<FlowEdge>();
 		for(FlowEdge flowEdge : edgeToIdMap.values()){
 			list.add(flowEdge);
 		}
@@ -83,4 +95,38 @@ public class FlowNetwork {
 		return list;
 	}
 
+	public Collection<Node> getNodes() {
+		return nodes;
+	}
+	
+	public Node getSourceNode() {
+		return sourceNode;
+	}
+
+	public void setSourceNode(Node sourceNode) {
+		this.sourceNode = sourceNode;
+		nodes.add(sourceNode);
+	}
+
+	public Node getSinkNode() {
+		return sinkNode;
+	}
+
+	public void setSinkNode(Node sinkNode) {
+		this.sinkNode = sinkNode;
+		nodes.add(sinkNode);
+	}
+
+	
+	public Node getNode(int value){
+		for (Node node : this.nodes) {
+			if(node.value == value) {
+				return node;
+			}
+		}
+		return null;
+	}
+	
+	
 } 
+
