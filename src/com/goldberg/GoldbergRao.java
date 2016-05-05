@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 
 public class GoldbergRao {
 
@@ -103,17 +104,103 @@ public class GoldbergRao {
 		//Now for all the graphs provided, we will calculate max flow for Goldberg-Rao.
 		
 		for (FlowNetwork flowNetwork : flowNetworks) {
-			FlowNetwork maxFlow = goldbergRao(flowNetwork);
+			FlowNetwork maxFlow = goldbergRao(flowNetwork); 
+			
+		}
+	}
+
+
+
+
+	private static FlowNetwork goldbergRao(FlowNetwork flowNetwork) {
+		
+		int m = flowNetwork.getU();
+		int n = flowNetwork.getV();
+		double carat = Math.min(Math.pow(m, 2/3 ), Math.pow(n, 0.5));
+		double F = flowNetwork.getV() * flowNetwork.getU();
+		
+		while(F> 1) {
+			double delta = Math.ceil(F/carat);
+		
+			golbergTarjanBlockingFlow(flowNetwork);
+		}
+		return null;
+	}
+
+
+/*	We have a value i for the current distance label we are assigning to nodes.
+	We initialize i to 0. We keep two queues. One with nodes we should assign
+	i to called 'the current-queue' and one with nodes we should assign i + 1 to
+	called 'the next-queue'. Whenever we process a node v, we look at all its
+	incoming edges. If the edge (w; v) has positive residual capacity we calculate
+	the length of the edge using `. If the length of (w; v) is zero we add node
+	w to the current-queue, otherwise we add it to the next-queue. Whenever
+	a node has been fully processed we get the next node to process from the
+	current-queue. When the current-queue is empty we increase i by one and
+	use the next-queue as the the current-queue and vice versa. We start this
+	method by processing the target node, and are done when both queues are
+	empty.
+	To prevent us from processing the same node several times we reset the
+	distance label of each node in the graph to 1 before we process them. Then
+	we can recognize whether a node has been processed by looking at its label.
+*/	
+	private static void updateDistanceLabels(double delta, FlowNetwork flowNetwork) {
+		int i = 0;
+		LinkedList<Node> currentQueue = new LinkedList<Node>();
+		LinkedList<Node> nextQueue = new LinkedList<Node>();
+		
+		flowNetwork.getSinkNode().setDist(0);
+		currentQueue.add(flowNetwork.getSinkNode());
+		
+		//TODO Verify condition
+		while(currentQueue.isEmpty() && nextQueue.isEmpty()) {
+			while (currentQueue.isEmpty() == false) {
+				Node v = currentQueue.pop();
+				v.setDist(i);
+				for (FlowEdge incomingEdge : v.getInEdges()) {
+					Node w = incomingEdge.getFromNode();
+					if(incomingEdge.getResidualCapacity() > 0){
+						int l = binaryLength(w, v, delta, flowNetwork);
+						if (l == 0) {
+							currentQueue.add(w);
+						} else {
+							nextQueue.add(w);
+						}
+					}
+				}
+			}
+			
+			if(currentQueue.isEmpty() && nextQueue.isEmpty() == false) {
+				i++;
+				currentQueue = nextQueue;
+			} 
 		}
 		
 		
 		
+		while (currentQueue.isEmpty() == false ) {
+			Node v = currentQueue.getFirst();
+			for (FlowEdge incomingEdge : v.getInEdges()) {
+				Node w = incomingEdge.getFromNode();
+				if(incomingEdge.getResidualCapacity() > 0){
+					int l = binaryLength(w, v, delta, flowNetwork);
+					if (l == 0) {
+						currentQueue.add(w);
+					} else {
+						nextQueue.add(w);
+					}
+				}
+			}
+			if(currentQueue.isEmpty()) {
+				i++;
+				currentQueue = nextQueue;
+			}
+		}
+		
+		
 	}
 
-	
-	
-
-	private static FlowNetwork goldbergRao(FlowNetwork flowNetwork) {
+	private static FlowNetwork golbergTarjanBlockingFlow(FlowNetwork flowNetwork) {
 		
 		for (FlowEdge edge : flowNetwork.edges()) {
 			edge.updateFlow(0);
@@ -153,10 +240,8 @@ public class GoldbergRao {
 
 
 	private static ArrayList<Node> topologicalSort(FlowNetwork flowNetwork) {
-		// TODO Auto-generated method stub
-		int nodes = flowNetwork.getNodes().size();
-	    
-	    HashMap<Node, Boolean> markedNodesMap = new HashMap<Node, Boolean>();
+
+		HashMap<Node, Boolean> markedNodesMap = new HashMap<Node, Boolean>();
 	    for(Node node : flowNetwork.getNodes()) {
 	    	markedNodesMap.put(node, false);
 	    }
@@ -175,16 +260,57 @@ public class GoldbergRao {
 
 
 
-	public int binaryLength(int from, int to, double delta, FlowNetwork G) throws IllegalArgumentException {
-		FlowEdge edge = G.getEdge(from, to);
-		if (edge != null) {
-			if (edge.getResidualCapacity() >= delta) {
-				return 1;
-			} 
+	private static int binaryLength(Node fromNode, Node toNode, double delta, FlowNetwork flowNetwork) throws IllegalArgumentException {
+		//FlowEdge edge = flowNetwork.getEdge(from, to);
+		
+		FlowEdge flowEdge = null;
+		for (FlowEdge edge : fromNode.getOutEdges()) {
+			if(edge.getToNode() == toNode) {
+				flowEdge = edge;
+				break;
+			}
+		}
+		
+
+		if (flowEdge.getResidualCapacity() >= 3*delta || isSpecialEdge(flowEdge, delta)) {
 			return 0;
 		} else {
-			throw new IllegalArgumentException();
+			return 1;
 		}
 
+
+	}
+
+
+
+
+	private static boolean isSpecialEdge(FlowEdge flowEdge, double delta) {
+		
+		boolean flag = false;
+		if(2*delta <= flowEdge.getResidualCapacity() &&  flowEdge.getResidualCapacity() > 3*delta) {
+			flag = true;
+		}
+		
+		FlowEdge backEdge = null;
+		
+		Node v = flowEdge.getFromNode();
+		Node w = flowEdge.getToNode();
+		
+		for (FlowEdge edge : w.getOutEdges()) {
+			if(edge.getToNode() == v) {
+				backEdge = edge;
+				break;
+			}
+		}
+		
+		if (backEdge.getResidualCapacity() >= 3 * delta) {
+			flag = true;
+		}
+		
+		//TODO :d(v) == d(w) check 
+		//TODO: Are all the conditions and/or 
+		
+		
+		return flag;
 	}
 }

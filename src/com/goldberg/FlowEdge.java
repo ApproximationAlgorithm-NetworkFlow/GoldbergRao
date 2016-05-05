@@ -75,7 +75,7 @@ public class FlowEdge {
 		this.capacity = capacity;
 	}
 
-	public double getFlow() {
+	public int getFlow() {
 		return flow;
 	}
 

@@ -8,6 +8,7 @@ import java.util.HashSet;
 public class FlowNetwork {
 	private int V;
 	private int E;
+	private int U = Integer.MIN_VALUE;
 	private Bag<FlowEdge>[] adj;
 	//SrcNode to Edge Map
 	private HashMap<Node, FlowEdge> edgeToIdMap = new HashMap<Node, FlowEdge>();
@@ -43,41 +44,37 @@ public class FlowNetwork {
 */
 	public void addEdge(FlowEdge e) throws IllegalArgumentException {
 		E++;
-		// adj[v].add(e);
-		// adj[w].add(e);
-		
-		/*if (edgeToIdMap.get(e.getFromNode()) != null) {
-			throw new IllegalArgumentException("Edge already exists");
-		}*/
-		
-		
 		nodes.add(e.getFromNode());
 		nodes.add(e.getToNode());
 		e.getFromNode().addOutEdge(e);
 		e.getToNode().addInEdge(e);
 		edgeToIdMap.put(e.getFromNode(), e);
+		
+		if(e.getCapacity() > this.U) {
+			this.U = e.getCapacity();
+		}
 
 	}
-	public FlowEdge getEdge(int s, int t)
-	{
-		String key = String.valueOf(s) + "-" + String.valueOf(t);
-		if(edgeToIdMap.get(key) != null) {
-			return edgeToIdMap.get(key);
+	/*public FlowEdge getEdge(Node fromNode, Node toNode ){
+		
+		if(edgeToIdMap.get(fromNode) != null) {
+			for (FlowEdge edge : edgeToIdMap.get(fromNode)) {
+				
+			}
 		}
 		return null;
-	}
+	}*/
 	// public int E() { return E; }
 	public Iterable<FlowEdge> adj(int v)
 	{ 
 		return adj[v]; 
 	}
 	//return number of vertices and edges
-	public int V()
-	{
-		return V;
+	public int getV(){
+		return nodes.size();
 	}
-	public int E() 
-	{ 
+	
+	public int E() { 
 		return E; 
 	}
 	// return list of all edges - excludes self loops
@@ -97,6 +94,10 @@ public class FlowNetwork {
 
 	public Collection<Node> getNodes() {
 		return nodes;
+	}
+	
+	public int getU() {
+		return this.U;
 	}
 	
 	public Node getSourceNode() {

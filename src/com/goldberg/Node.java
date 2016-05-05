@@ -7,12 +7,21 @@ public class Node {
 	private boolean isBlocked = false;
 	private ArrayList<FlowEdge> outEdges = new ArrayList<>();
 	private ArrayList<FlowEdge> inEdges = new ArrayList<>();
+	private int excess = Integer.MAX_VALUE;
+	private int dist = Integer.MAX_VALUE;
 	
+	public int getExcess() {
+		int outDegree = 0, inDegree = 0;
+		for (FlowEdge outEdge : outEdges) {
+			outDegree += outEdge.getFlow();
+		}
+		return excess;
+	}
+
 	public Node(int value) {
 		this.value = value;
 	}
 
-	
 	public int getValue() {
 		return value;
 	}
@@ -29,6 +38,14 @@ public class Node {
 		this.isBlocked = isBlocked;
 	}
 
+	public int getDist() {
+		return dist;
+	}
+
+	public void setDist(int dist) {
+		this.dist = dist;
+	}
+	
 	public ArrayList<FlowEdge> getOutEdges() {
 		return outEdges;
 	}
@@ -53,6 +70,7 @@ public class Node {
 	public void addInEdge(FlowEdge flowEdge) {
 		this.inEdges.add(flowEdge);
 	}
+	
 	
 	@Override
 	public boolean equals(Object obj) {
