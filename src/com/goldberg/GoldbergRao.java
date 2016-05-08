@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
+import java.util.Stack;
 
 public class GoldbergRao {
 
@@ -121,14 +122,80 @@ public class GoldbergRao {
 		
 		while(F> 1) {
 			double delta = Math.ceil(F/carat);
-		
+			updateDistanceLabels(delta, flowNetwork);
+			ArrayList<ArrayList<Node>> stronglyConnectedComponents = findStronglyConnectedComponents(flowNetwork);
+			//TODO : Implement
+			contractStronglyConnectedComponents(stronglyConnectedComponents);
 			golbergTarjanBlockingFlow(flowNetwork);
 		}
 		return null;
 	}
 
 
-/*	We have a value i for the current distance label we are assigning to nodes.
+private static void contractStronglyConnectedComponents(
+			ArrayList<ArrayList<Node>> stronglyConnectedComponents) {
+		// TODO Auto-generated method stub
+		
+	}
+
+
+
+
+private static ArrayList<ArrayList<Node>> findStronglyConnectedComponents(FlowNetwork flowNetwork) {
+
+	int i = 0;
+	Stack<Node> stack = new Stack<Node>();
+	HashMap<Node, Node> nodeVsLowLink = new HashMap<Node, Node>();
+	ArrayList<ArrayList<Node>> stronglyConnectedComponents = new ArrayList<ArrayList<Node>>(); 
+	for (Node node : flowNetwork.getNodes()) {
+		nodeVsLowLink.put(node, node);
+	}
+	
+	
+	for (Node node : flowNetwork.getNodes()) {
+		//Not visited
+		if(node.getIndex() < 0) {
+			scc(node, i, stack, nodeVsLowLink, stronglyConnectedComponents);
+		}
+	}
+	
+	return stronglyConnectedComponents;
+	
+	}
+
+	private static void scc(Node v, int i, Stack<Node> stack, HashMap<Node, Node> nodeVsLowLink, ArrayList<ArrayList<Node>> stronglyConnectedComponents) {
+		i++;
+		v.setIndex(i);
+		stack.push(v);
+		//Verify the friend nodes
+		for (FlowEdge edge : v.getOutEdges()) {
+			Node w = edge.getToNode();
+			if(w.getIndex() < 0) {
+				scc(w, i, stack, nodeVsLowLink, stronglyConnectedComponents);
+			}
+			int lowLink = nodeVsLowLink.get(v).getValue();
+			int friendLowLink = nodeVsLowLink.get(w).getValue();
+			if(friendLowLink < lowLink) {
+				nodeVsLowLink.put(v, w);
+			}
+		}
+		int lowLink = nodeVsLowLink.get(v).getValue();
+		if (lowLink >= v.getIndex()) {
+			if(lowLink == v.getIndex()) {
+				ArrayList<Node> subList = (ArrayList<Node>) stack.subList(v.getIndex(), stack.size());
+				stronglyConnectedComponents.add(subList);
+			}
+			Node n = stack.pop();
+			while(n != v) {
+				n = stack.pop();
+			}
+		}
+	}
+
+
+
+
+	/*	We have a value i for the current distance label we are assigning to nodes.
 	We initialize i to 0. We keep two queues. One with nodes we should assign
 	i to called 'the current-queue' and one with nodes we should assign i + 1 to
 	called 'the next-queue'. Whenever we process a node v, we look at all its
@@ -153,7 +220,7 @@ public class GoldbergRao {
 		currentQueue.add(flowNetwork.getSinkNode());
 		
 		//TODO Verify condition
-		while(currentQueue.isEmpty() && nextQueue.isEmpty()) {
+		while(!currentQueue.isEmpty() || !nextQueue.isEmpty()) {
 			while (currentQueue.isEmpty() == false) {
 				Node v = currentQueue.pop();
 				v.setDist(i);
@@ -173,6 +240,7 @@ public class GoldbergRao {
 			if(currentQueue.isEmpty() && nextQueue.isEmpty() == false) {
 				i++;
 				currentQueue = nextQueue;
+				nextQueue = new LinkedList<Node>();
 			} 
 		}
 		
@@ -286,31 +354,25 @@ public class GoldbergRao {
 
 	private static boolean isSpecialEdge(FlowEdge flowEdge, double delta) {
 		
-		boolean flag = false;
 		if(2*delta <= flowEdge.getResidualCapacity() &&  flowEdge.getResidualCapacity() > 3*delta) {
-			flag = true;
-		}
-		
-		FlowEdge backEdge = null;
-		
-		Node v = flowEdge.getFromNode();
-		Node w = flowEdge.getToNode();
-		
-		for (FlowEdge edge : w.getOutEdges()) {
-			if(edge.getToNode() == v) {
-				backEdge = edge;
-				break;
+
+			FlowEdge backEdge = null;
+			
+			Node v = flowEdge.getFromNode();
+			Node w = flowEdge.getToNode();
+			
+			for (FlowEdge edge : w.getOutEdges()) {
+				if(edge.getToNode() == v) {
+					backEdge = edge;
+					break;
+				}
 			}
+			
+			if ((backEdge.getResidualCapacity() >= (3*delta)) && (v.getDist() == w.getDist())) {
+				return true;
+			}
+			
 		}
-		
-		if (backEdge.getResidualCapacity() >= 3 * delta) {
-			flag = true;
-		}
-		
-		//TODO :d(v) == d(w) check 
-		//TODO: Are all the conditions and/or 
-		
-		
-		return flag;
+		return false;
 	}
 }

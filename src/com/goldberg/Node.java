@@ -9,7 +9,8 @@ public class Node {
 	private ArrayList<FlowEdge> inEdges = new ArrayList<>();
 	private int excess = Integer.MAX_VALUE;
 	private int dist = Integer.MAX_VALUE;
-	
+	private int index = -1;
+	 
 	public int getExcess() {
 		int outDegree = 0, inDegree = 0;
 		for (FlowEdge outEdge : outEdges) {
@@ -83,5 +84,13 @@ public class Node {
 		
 		return String.valueOf(value);
 	}
+
 	
+	public int getIndex() {
+		return index;
+	}
+
+	public void setIndex(int index) {
+		this.index = index;
+	}
 }
