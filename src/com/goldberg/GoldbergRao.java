@@ -7,11 +7,11 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Queue;
 import java.util.Stack;
 
 public class GoldbergRao {
@@ -25,7 +25,7 @@ public class GoldbergRao {
 
 		URL url = GoldbergRao.class.getResource("inputFile.txt");
 		File inputFile = new File(url.getPath());
-	//	File inputFile = new File("inputFile.txt");
+		//	File inputFile = new File("inputFile.txt");
 		BufferedReader br = null;
 		List<FlowNetwork> flowNetworks = new ArrayList<FlowNetwork>(); 
 		try {
@@ -33,10 +33,10 @@ public class GoldbergRao {
 			//Skipping comment
 			br.readLine();
 			int noOfTopologies = Integer.parseInt(br.readLine());
-			
+
 			for (int i = 0; i < noOfTopologies; i++) {
 				FlowNetwork flowNetwork = new FlowNetwork();	
-				
+
 				//Read and construct graphs
 				String graph[] = br.readLine().trim().split(" ");
 				int noOfEdges = Integer.parseInt(graph[0]);
@@ -44,31 +44,31 @@ public class GoldbergRao {
 				Node sinkNode = new Node(Integer.parseInt(graph[2]));
 				flowNetwork.setSourceNode(sourceNode);
 				flowNetwork.setSinkNode(sinkNode);
-		
-				
+
+
 				for (int j = 0; j < noOfEdges; j++) {				
 					String edge[] = br.readLine().trim().split(" ");
 					if(edge.length != 3) {
 						System.out.println("Skipping Edge. Reason: Edge should have format 'FromNode ToNode Capacity");
 						continue;
 					}
-					
+
 					Node fromNode = flowNetwork.getNode(Integer.parseInt(edge[0]));
 					if(fromNode == null ){
 						fromNode = new Node(Integer.parseInt(edge[0]));
 					}
-					
-					
+
+
 					Node toNode = flowNetwork.getNode(Integer.parseInt(edge[1]));
 					if (toNode == null){
 						toNode = new Node(Integer.parseInt(edge[1]));
 					}
 					int capacity = Integer.parseInt(edge[2]);
-					
+
 					//isStandAloneVertice()
-					
-					
-					
+
+
+
 					FlowEdge flowEdge = new FlowEdge(fromNode, toNode, capacity); 
 					try{
 						flowNetwork.addEdge(flowEdge);
@@ -76,7 +76,7 @@ public class GoldbergRao {
 						System.out.println("Cannot Add Edge " + e.toString()
 								+ " to the Graph. Reason: " + e.getMessage());
 					}
-					
+
 				}
 				flowNetworks.toString();
 				flowNetworks.add(flowNetwork);
@@ -100,67 +100,224 @@ public class GoldbergRao {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-	
+
 		//At this point we would have read all the data from the file and constructed graph details.
 		//Now for all the graphs provided, we will calculate max flow for Goldberg-Rao.
-		
+
 		for (FlowNetwork flowNetwork : flowNetworks) {
 			FlowNetwork maxFlow = goldbergRao(flowNetwork); 
-			
+
 		}
 	}
 
-
-
-
 	private static FlowNetwork goldbergRao(FlowNetwork flowNetwork) {
-		
+
 		int m = flowNetwork.getU();
 		int n = flowNetwork.getV();
 		double carat = Math.min(Math.pow(m, 2/3 ), Math.pow(n, 0.5));
 		double F = flowNetwork.getV() * flowNetwork.getU();
-		
+
 		while(F> 1) {
 			double delta = Math.ceil(F/carat);
 			updateDistanceLabels(delta, flowNetwork);
 			ArrayList<ArrayList<Node>> stronglyConnectedComponents = findStronglyConnectedComponents(flowNetwork);
 			//TODO : Implement
-			contractStronglyConnectedComponents(stronglyConnectedComponents);
+			HashMap<Integer, ArrayList<Node>> superNodeToSCCMap = contractStronglyConnectedComponents(stronglyConnectedComponents);
+			routingFlow(superNodeToSCCMap, flowNetwork, delta);
 			golbergTarjanBlockingFlow(flowNetwork);
+			updateF(F, flowNetwork);
 		}
 		return null;
 	}
 
 
-private static void contractStronglyConnectedComponents(
-			ArrayList<ArrayList<Node>> stronglyConnectedComponents) {
-		// TODO Auto-generated method stub
+	private static double updateF(double F, FlowNetwork flowNetwork) {
+		
+		Node source = flowNetwork.getSourceNode();
+		
+		int[] canonicalCut = new int[source.getDist()];
+		Arrays.fill(canonicalCut, Integer.MAX_VALUE);
+		
+		for (FlowEdge edge : flowNetwork.edges()) {
+			Node v = edge.getFromNode();
+			Node w = edge.getToNode();
+			if (v.getDist() > w.getDist()) {
+				canonicalCut[v.getDist()] = edge.getResidualCapacity();
+			}		
+			
+		}
+		
+		int min = Integer.MAX_VALUE;
+		for (int i : canonicalCut) {
+			if(i <  min){
+				min = i;
+			}
+		}
+		if(min < (F/2)) {
+			F = min;
+		}
+		
+		return F;
 		
 	}
 
-
-
-
-private static ArrayList<ArrayList<Node>> findStronglyConnectedComponents(FlowNetwork flowNetwork) {
-
-	int i = 0;
-	Stack<Node> stack = new Stack<Node>();
-	HashMap<Node, Node> nodeVsLowLink = new HashMap<Node, Node>();
-	ArrayList<ArrayList<Node>> stronglyConnectedComponents = new ArrayList<ArrayList<Node>>(); 
-	for (Node node : flowNetwork.getNodes()) {
-		nodeVsLowLink.put(node, node);
+	private static void routingFlow( HashMap<Integer, ArrayList<Node>> superNodeToSCCMap, FlowNetwork flowNetwork, double delta) {
+		// TODO Auto-generated method stub
+		for (Node node : flowNetwork.getNodes()) {
+			
+			int supply = 0;
+			//Calculating Supply == Sum of all incoming flows
+			for (FlowEdge inEdge : node.getInEdges()) {
+				supply += inEdge.getFlow();
+			}
+			node.setSupply(supply);
+			
+			int demand = 0;
+			//Calculating Demand == Sum of all outgoing flows
+			for (FlowEdge outEdge : node.getOutEdges()) {
+				demand += outEdge.getFlow();
+			}
+			node.setDemand(demand);
+		}
+		
+		
+		for (ArrayList<Node> scc : superNodeToSCCMap.values()) {
+			Node v = scc.get(0);
+			buildInTree(v, scc, delta, flowNetwork);
+			buildOutTree(v, scc, delta, flowNetwork);
+			route(v, delta);
+		}
 	}
-	
-	
-	for (Node node : flowNetwork.getNodes()) {
-		//Not visited
-		if(node.getIndex() < 0) {
-			scc(node, i, stack, nodeVsLowLink, stronglyConnectedComponents);
+
+	private static void route(Node v, double delta) {
+		int descendantDemand = calculateDescendantDemandsRecursively(v);
+		v.setDescendantDemand(descendantDemand);
+		moveSupplyForwardRecursively(v, delta);
+		moveDemandBackwardRecursively(v, delta);
+	}
+
+	private static void moveDemandBackwardRecursively(Node v, double delta) {
+		for (Node w : v.getOutTree()) {
+			moveDemandBackwardRecursively(w, delta);
+		}
+		int demandToMove = v.getDemand() - v.getSupply();
+		
+		Node w = v.getOutTreeParent();
+		
+		for (FlowEdge outEdge : w.getOutEdges()) {
+			if(outEdge.getToNode() == v) {
+				int newFlow = outEdge.getFlow() + demandToMove;
+				outEdge.updateFlow(newFlow);
+			}
+		}
+		int newDemand = w.getDemand() + demandToMove;
+		w.setDemand(newDemand);
+	}
+
+	private static void moveSupplyForwardRecursively(Node v, double delta) {
+		for (Node w : v.getInTree()) {
+			moveSupplyForwardRecursively(w, delta);
+		}
+		int supplyToMove = (int) Math.min(v.getSupply(), delta - v.getDescendantDemand());
+		int newSupply = v.getSupply() - supplyToMove;
+		v.setSupply(newSupply);
+		Node w = v.getInTreeParent();
+		
+		for (FlowEdge inEdge : w.getInEdges()) {
+			if(inEdge.getFromNode() == v) {
+				int newFlow = inEdge.getFlow() + supplyToMove;
+				inEdge.updateFlow(newFlow);
+			}
+		}
+		int wNewSupply = w.getSupply() + supplyToMove;
+		w.setSupply(wNewSupply);
+	}
+
+	private static int calculateDescendantDemandsRecursively(Node v) {
+		int descendantDemand = v.getDemand();
+		for (Node w : v.getOutTree()) {
+			descendantDemand = descendantDemand + calculateDescendantDemandsRecursively(w);
+		}
+		return descendantDemand;
+	}
+
+	private static void buildInTree(Node v, ArrayList<Node> scc, double delta, FlowNetwork flowNetwork) {
+		
+		LinkedList<Node> queue = new LinkedList<Node>();
+		queue.add(v);
+		while (!queue.isEmpty()) {
+			Node w = queue.pop();
+			for (FlowEdge inEdge : w.getInEdges()) {
+				Node u = inEdge.getFromNode();
+				if(scc.contains(u) && binaryLength(u, w, delta, flowNetwork) == 0) {
+					if(u.getInTreeParent() == null) {
+						u.setInTreeParent(w);
+						w.addToInTree(u);
+						queue.add(u);
+					}
+				}
+			}
+		}
+	}
+
+	private static void buildOutTree(Node v, ArrayList<Node> scc, double delta, FlowNetwork flowNetwork) {
+		
+		LinkedList<Node> queue = new LinkedList<Node>();
+		queue.add(v);
+		while (!queue.isEmpty()) {
+			Node w = queue.pop();
+			for (FlowEdge outEdge : w.getOutEdges()) {
+				Node u = outEdge.getFromNode();
+				if(scc.contains(u) && binaryLength(u, w, delta, flowNetwork) == 0) {
+					if(u.getOutTreeParent() == null) {
+						u.setOutTreeParent(w);
+						w.addToOutTree(u);
+						queue.add(u);
+					}
+				}
+			}
+			
 		}
 	}
 	
-	return stronglyConnectedComponents;
-	
+	private static HashMap<Integer,ArrayList<Node>> contractStronglyConnectedComponents(
+			ArrayList<ArrayList<Node>> stronglyConnectedComponents) {
+		int i = 0;
+		HashMap<Integer, ArrayList<Node>> superNodeToSCCMap = new HashMap<Integer, ArrayList<Node>>();
+		for (ArrayList<Node> scc : stronglyConnectedComponents) {
+			i++;
+			superNodeToSCCMap.put(i, scc);
+			for (Node node : scc) {
+				node.setSuperNode(i);
+			}
+		}
+		
+		return superNodeToSCCMap;
+	}
+
+
+
+
+	private static ArrayList<ArrayList<Node>> findStronglyConnectedComponents(FlowNetwork flowNetwork) {
+
+		int i = 0;
+		Stack<Node> stack = new Stack<Node>();
+		HashMap<Node, Node> nodeVsLowLink = new HashMap<Node, Node>();
+		ArrayList<ArrayList<Node>> stronglyConnectedComponents = new ArrayList<ArrayList<Node>>(); 
+		for (Node node : flowNetwork.getNodes()) {
+			nodeVsLowLink.put(node, node);
+		}
+
+
+		for (Node node : flowNetwork.getNodes()) {
+			//Not visited
+			if(node.getIndex() < 0) {
+				scc(node, i, stack, nodeVsLowLink, stronglyConnectedComponents);
+			}
+		}
+
+		return stronglyConnectedComponents;
+
 	}
 
 	private static void scc(Node v, int i, Stack<Node> stack, HashMap<Node, Node> nodeVsLowLink, ArrayList<ArrayList<Node>> stronglyConnectedComponents) {
@@ -210,15 +367,15 @@ private static ArrayList<ArrayList<Node>> findStronglyConnectedComponents(FlowNe
 	To prevent us from processing the same node several times we reset the
 	distance label of each node in the graph to 1 before we process them. Then
 	we can recognize whether a node has been processed by looking at its label.
-*/	
+	 */	
 	private static void updateDistanceLabels(double delta, FlowNetwork flowNetwork) {
 		int i = 0;
 		LinkedList<Node> currentQueue = new LinkedList<Node>();
 		LinkedList<Node> nextQueue = new LinkedList<Node>();
-		
+
 		flowNetwork.getSinkNode().setDist(0);
 		currentQueue.add(flowNetwork.getSinkNode());
-		
+
 		//TODO Verify condition
 		while(!currentQueue.isEmpty() || !nextQueue.isEmpty()) {
 			while (currentQueue.isEmpty() == false) {
@@ -236,16 +393,16 @@ private static ArrayList<ArrayList<Node>> findStronglyConnectedComponents(FlowNe
 					}
 				}
 			}
-			
+
 			if(currentQueue.isEmpty() && nextQueue.isEmpty() == false) {
 				i++;
 				currentQueue = nextQueue;
 				nextQueue = new LinkedList<Node>();
 			} 
 		}
-		
-		
-		
+
+
+
 		while (currentQueue.isEmpty() == false ) {
 			Node v = currentQueue.getFirst();
 			for (FlowEdge incomingEdge : v.getInEdges()) {
@@ -264,65 +421,66 @@ private static ArrayList<ArrayList<Node>> findStronglyConnectedComponents(FlowNe
 				currentQueue = nextQueue;
 			}
 		}
-		
-		
+
+
 	}
 
 	private static FlowNetwork golbergTarjanBlockingFlow(FlowNetwork flowNetwork) {
-		
+
 		for (FlowEdge edge : flowNetwork.edges()) {
 			edge.updateFlow(0);
 		}
-		
-		
+
+
 		ArrayList<Node> initialList = topologicalSort(flowNetwork);
 		LinkedList<ArrayList<Node>> L = new LinkedList<ArrayList<Node>>();
 		L.add(initialList);
-		
-		
+
+
 		for (FlowEdge edgesFromS : flowNetwork.getSourceNode().getOutEdges()) {
-			
+
 			//TODO Transfer maximum capacity flow through (s,v) and update (v,s) accordingly
 			//TODO Update excess of v
 			System.out.println(edgesFromS.toString());
 		}
- 
+
+
 		// TODO while(node is active) ==> Discharge
-		
+
 		// TODO Update tree
-		
+
 		return null;
 	}
 
 
 	private static void dfs(FlowNetwork flowNetwork, HashMap<Node, Boolean> markedNodesMap, ArrayList<Node> sortedList, Node node) {
-	    //used[u] = true;
-	    markedNodesMap.remove(node);
-	    markedNodesMap.put(node, true);
-	    for (FlowEdge edge : node.getOutEdges())
-	      if (markedNodesMap.get(edge.getToNode()) == false)
-	        dfs(flowNetwork, markedNodesMap, sortedList, edge.getToNode());
-	    sortedList.add(node);
-	  }
+		//used[u] = true;
+		markedNodesMap.remove(node);
+		markedNodesMap.put(node, true);
+		for (FlowEdge edge : node.getOutEdges())
+			if (markedNodesMap.get(edge.getToNode()) == false)
+				dfs(flowNetwork, markedNodesMap, sortedList, edge.getToNode());
+		sortedList.add(node);
+	}
 
 
 
 	private static ArrayList<Node> topologicalSort(FlowNetwork flowNetwork) {
 
 		HashMap<Node, Boolean> markedNodesMap = new HashMap<Node, Boolean>();
-	    for(Node node : flowNetwork.getNodes()) {
-	    	markedNodesMap.put(node, false);
-	    }
-	    
-	    
-	    ArrayList<Node> sortedList = new ArrayList<Node>();
-	    for(Node node : flowNetwork.getNodes()) {
-	    	if (markedNodesMap.get(node) == false) {
-	    		dfs(flowNetwork, markedNodesMap, sortedList, node);
-	    	}
-	    }
-	    Collections.reverse(sortedList);
-	    return sortedList;
+		for(Node node : flowNetwork.getNodes()) {
+			markedNodesMap.put(node, false);
+		}
+
+
+		ArrayList<Node> sortedList = new ArrayList<Node>();
+		for(Node node : flowNetwork.getNodes()) {
+			if (markedNodesMap.get(node) == false) {
+				dfs(flowNetwork, markedNodesMap, sortedList, node);
+			}
+		}
+		Collections.reverse(sortedList);
+		return sortedList;
 	}
 
 
@@ -330,7 +488,7 @@ private static ArrayList<ArrayList<Node>> findStronglyConnectedComponents(FlowNe
 
 	private static int binaryLength(Node fromNode, Node toNode, double delta, FlowNetwork flowNetwork) throws IllegalArgumentException {
 		//FlowEdge edge = flowNetwork.getEdge(from, to);
-		
+
 		FlowEdge flowEdge = null;
 		for (FlowEdge edge : fromNode.getOutEdges()) {
 			if(edge.getToNode() == toNode) {
@@ -338,40 +496,37 @@ private static ArrayList<ArrayList<Node>> findStronglyConnectedComponents(FlowNe
 				break;
 			}
 		}
-		
 
 		if (flowEdge.getResidualCapacity() >= 3*delta || isSpecialEdge(flowEdge, delta)) {
 			return 0;
 		} else {
 			return 1;
 		}
-
-
 	}
 
 
 
 
 	private static boolean isSpecialEdge(FlowEdge flowEdge, double delta) {
-		
+
 		if(2*delta <= flowEdge.getResidualCapacity() &&  flowEdge.getResidualCapacity() > 3*delta) {
 
 			FlowEdge backEdge = null;
-			
+
 			Node v = flowEdge.getFromNode();
 			Node w = flowEdge.getToNode();
-			
+
 			for (FlowEdge edge : w.getOutEdges()) {
 				if(edge.getToNode() == v) {
 					backEdge = edge;
 					break;
 				}
 			}
-			
+
 			if ((backEdge.getResidualCapacity() >= (3*delta)) && (v.getDist() == w.getDist())) {
 				return true;
 			}
-			
+
 		}
 		return false;
 	}

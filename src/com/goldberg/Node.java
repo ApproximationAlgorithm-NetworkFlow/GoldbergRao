@@ -9,8 +9,22 @@ public class Node {
 	private ArrayList<FlowEdge> inEdges = new ArrayList<>();
 	private int excess = Integer.MAX_VALUE;
 	private int dist = Integer.MAX_VALUE;
+	
+	//For Strongly Connected Components
 	private int index = -1;
+	
+	//Contracting Strongly Connected Components
+	private int superNode = -1;
 	 
+	//For Routing the Flow
+	private int supply = -1;
+	private int demand = -1;
+	private int descendantDemand;
+	private Node inTreeParent = null;
+	private Node outTreeParent = null;
+	private ArrayList<Node> inTree = new ArrayList<Node>();
+	private ArrayList<Node> outTree = new ArrayList<Node>();
+	
 	public int getExcess() {
 		int outDegree = 0, inDegree = 0;
 		for (FlowEdge outEdge : outEdges) {
@@ -93,4 +107,69 @@ public class Node {
 	public void setIndex(int index) {
 		this.index = index;
 	}
+	
+	public int getSuperNode() {
+		return superNode;
+	}
+
+	public void setSuperNode(int superNode) {
+		this.superNode = superNode;
+	}
+	
+	public int getSupply() {
+		return supply;
+	}
+
+	public void setSupply(int supply) {
+		this.supply = supply;
+	}
+	
+	public int getDemand() {
+		return demand;
+	}
+
+	public void setDemand(int demand) {
+		this.demand = demand;
+	}
+
+	public int getDescendantDemand() {
+		return descendantDemand;
+	}
+
+	public void setDescendantDemand(int descendantDemand) {
+		this.descendantDemand = descendantDemand;
+	}
+
+	public Node getInTreeParent() {
+		return inTreeParent;
+	}
+
+	public void setInTreeParent(Node inTreeParent) {
+		this.inTreeParent = inTreeParent;
+	}
+	
+	public Node getOutTreeParent() {
+		return outTreeParent;
+	}
+
+	public void setOutTreeParent(Node outTreeParent) {
+		this.outTreeParent = outTreeParent;
+	}
+	
+	public ArrayList<Node> getInTree() {
+		return inTree;
+	}
+
+	public void addToInTree(Node node) {
+		this.inTree.add(node);
+	}
+
+	public ArrayList<Node> getOutTree() {
+		return outTree;
+	}
+
+	public void addToOutTree(Node node) {
+		this.outTree.add(node);
+	}
+
 }
