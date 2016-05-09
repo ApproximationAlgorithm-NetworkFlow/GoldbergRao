@@ -9,10 +9,12 @@ public class Node {
 	private ArrayList<FlowEdge> inEdges = new ArrayList<>();
 	private int excess = Integer.MAX_VALUE;
 	private int dist = Integer.MAX_VALUE;
-	
+	private int label=0;
+
 	//For Strongly Connected Components
 	private int index = -1;
-	
+	private int lowLink = -1;
+
 	//Contracting Strongly Connected Components
 	private int superNode = -1;
 	 
@@ -25,14 +27,19 @@ public class Node {
 	private ArrayList<Node> inTree = new ArrayList<Node>();
 	private ArrayList<Node> outTree = new ArrayList<Node>();
 	
+	//TODO Verify Excess
 	public int getExcess() {
-		int outDegree = 0, inDegree = 0;
+		/*int outDegree = 0, inDegree = 0;
 		for (FlowEdge outEdge : outEdges) {
 			outDegree += outEdge.getFlow();
-		}
+		}*/
 		return excess;
 	}
-
+	
+	public void setExcess(int excess) {
+		this.excess = excess;
+	}
+	
 	public Node(int value) {
 		this.value = value;
 	}
@@ -61,6 +68,13 @@ public class Node {
 		this.dist = dist;
 	}
 	
+	public int getLabel() {
+		return label;
+	}
+
+	public void setLabel(int label) {
+		this.label = label;
+	}
 	public ArrayList<FlowEdge> getOutEdges() {
 		return outEdges;
 	}
@@ -106,6 +120,14 @@ public class Node {
 
 	public void setIndex(int index) {
 		this.index = index;
+	}
+	
+	public int getLowLink() {
+		return lowLink;
+	}
+
+	public void setLowLink(int lowLink) {
+		this.lowLink = lowLink;
 	}
 	
 	public int getSuperNode() {

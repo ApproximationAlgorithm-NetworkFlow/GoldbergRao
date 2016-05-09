@@ -49,6 +49,7 @@ public class FlowNetwork {
 		e.getFromNode().addOutEdge(e);
 		e.getToNode().addInEdge(e);
 		edgeToIdMap.put(e.getFromNode(), e);
+		e.updateFlow(0);
 		
 		if(e.getCapacity() > this.U) {
 			this.U = e.getCapacity();

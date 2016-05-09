@@ -16,11 +16,6 @@ import java.util.Stack;
 
 public class GoldbergRao {
 
-	private double F;
-	private double U;
-	private double carrat;
-	private double delta;
-
 	public static void main(String args[]) {
 
 		URL url = GoldbergRao.class.getResource("inputFile.txt");
@@ -105,17 +100,21 @@ public class GoldbergRao {
 		//Now for all the graphs provided, we will calculate max flow for Goldberg-Rao.
 
 		for (FlowNetwork flowNetwork : flowNetworks) {
-			FlowNetwork maxFlow = goldbergRao(flowNetwork); 
-
+			long startTime = System.currentTimeMillis();
+			FlowNetwork maxFlow = goldbergRao(flowNetwork);
+			long totalTime = System.currentTimeMillis() - startTime;
+			System.out.println("Total time in ms " + totalTime);
 		}
 	}
 
 	private static FlowNetwork goldbergRao(FlowNetwork flowNetwork) {
 
-		int m = flowNetwork.getU();
+		int m = flowNetwork.E();
 		int n = flowNetwork.getV();
-		double carat = Math.min(Math.pow(m, 2/3 ), Math.pow(n, 0.5));
-		double F = flowNetwork.getV() * flowNetwork.getU();
+		double m23 = Math.pow(m, 0.66);
+		double n12 = Math.pow(n, 0.5);
+		double carat = Math.min(m23, n12);
+		double F = n * flowNetwork.getU();
 
 		while(F> 1) {
 			double delta = Math.ceil(F/carat);
@@ -203,15 +202,16 @@ public class GoldbergRao {
 		int demandToMove = v.getDemand() - v.getSupply();
 		
 		Node w = v.getOutTreeParent();
-		
-		for (FlowEdge outEdge : w.getOutEdges()) {
-			if(outEdge.getToNode() == v) {
-				int newFlow = outEdge.getFlow() + demandToMove;
-				outEdge.updateFlow(newFlow);
+		if(w != null) {
+			for (FlowEdge outEdge : w.getOutEdges()) {
+				if(outEdge.getToNode() == v) {
+					int newFlow = outEdge.getFlow() + demandToMove;
+					outEdge.updateFlow(newFlow);
+				}
 			}
+			int newDemand = w.getDemand() + demandToMove;
+			w.setDemand(newDemand);
 		}
-		int newDemand = w.getDemand() + demandToMove;
-		w.setDemand(newDemand);
 	}
 
 	private static void moveSupplyForwardRecursively(Node v, double delta) {
@@ -223,14 +223,17 @@ public class GoldbergRao {
 		v.setSupply(newSupply);
 		Node w = v.getInTreeParent();
 		
-		for (FlowEdge inEdge : w.getInEdges()) {
-			if(inEdge.getFromNode() == v) {
-				int newFlow = inEdge.getFlow() + supplyToMove;
-				inEdge.updateFlow(newFlow);
+		if(w != null) {
+			for (FlowEdge inEdge : w.getInEdges()) {
+				if(inEdge.getFromNode() == v) {
+					int newFlow = inEdge.getFlow() + supplyToMove;
+					inEdge.updateFlow(newFlow);
+				}
 			}
+			int wNewSupply = w.getSupply() + supplyToMove;
+			w.setSupply(wNewSupply);
+
 		}
-		int wNewSupply = w.getSupply() + supplyToMove;
-		w.setSupply(wNewSupply);
 	}
 
 	private static int calculateDescendantDemandsRecursively(Node v) {
@@ -302,17 +305,15 @@ public class GoldbergRao {
 
 		int i = 0;
 		Stack<Node> stack = new Stack<Node>();
-		HashMap<Node, Node> nodeVsLowLink = new HashMap<Node, Node>();
+
 		ArrayList<ArrayList<Node>> stronglyConnectedComponents = new ArrayList<ArrayList<Node>>(); 
-		for (Node node : flowNetwork.getNodes()) {
-			nodeVsLowLink.put(node, node);
-		}
 
 
-		for (Node node : flowNetwork.getNodes()) {
+		ArrayList<Node> topologicallySortedNodes = topologicalSort(flowNetwork);
+		for (Node node : topologicallySortedNodes) {
 			//Not visited
 			if(node.getIndex() < 0) {
-				scc(node, i, stack, nodeVsLowLink, stronglyConnectedComponents);
+				scc(node, i, stack, stronglyConnectedComponents);
 			}
 		}
 
@@ -320,32 +321,36 @@ public class GoldbergRao {
 
 	}
 
-	private static void scc(Node v, int i, Stack<Node> stack, HashMap<Node, Node> nodeVsLowLink, ArrayList<ArrayList<Node>> stronglyConnectedComponents) {
-		i++;
+	private static void scc(Node v, int i, Stack<Node> stack, ArrayList<ArrayList<Node>> stronglyConnectedComponents) {
+		
 		v.setIndex(i);
+		v.setLowLink(i);
+		i++;
 		stack.push(v);
 		//Verify the friend nodes
 		for (FlowEdge edge : v.getOutEdges()) {
-			Node w = edge.getToNode();
-			if(w.getIndex() < 0) {
-				scc(w, i, stack, nodeVsLowLink, stronglyConnectedComponents);
-			}
-			int lowLink = nodeVsLowLink.get(v).getValue();
-			int friendLowLink = nodeVsLowLink.get(w).getValue();
-			if(friendLowLink < lowLink) {
-				nodeVsLowLink.put(v, w);
+			if(edge.getResidualCapacity() > 0) {
+				Node w = edge.getToNode();
+				if(stack.contains(w)) {
+					v.setLowLink(Math.min(v.getLowLink(), w.getIndex()));
+				}
+				if(w.getIndex() < 0) {
+					scc(w, i, stack, stronglyConnectedComponents);
+					v.setLowLink(Math.min(v.getLowLink(), w.getLowLink()));
+				}
+				
 			}
 		}
-		int lowLink = nodeVsLowLink.get(v).getValue();
-		if (lowLink >= v.getIndex()) {
-			if(lowLink == v.getIndex()) {
-				ArrayList<Node> subList = (ArrayList<Node>) stack.subList(v.getIndex(), stack.size());
-				stronglyConnectedComponents.add(subList);
-			}
+		if (v.getLowLink() == v.getIndex()) {
+			ArrayList<Node> subList = new ArrayList<Node>();
+			
 			Node n = stack.pop();
-			while(n != v) {
+			subList.add(n);
+			while(n.getValue() != v.getValue()) {
 				n = stack.pop();
+				subList.add(n);
 			}
+			stronglyConnectedComponents.add(subList);
 		}
 	}
 
@@ -425,31 +430,31 @@ public class GoldbergRao {
 
 	}
 
-	private static FlowNetwork golbergTarjanBlockingFlow(FlowNetwork flowNetwork) {
-
+	private static void golbergTarjanBlockingFlow(FlowNetwork flowNetwork) {
+		
 		for (FlowEdge edge : flowNetwork.edges()) {
 			edge.updateFlow(0);
 		}
-
-
-		ArrayList<Node> initialList = topologicalSort(flowNetwork);
+		GoldbergTarjanBlockingFlow blockingFlow = new GoldbergTarjanBlockingFlow(flowNetwork.getSourceNode());
+		blockingFlow.discharge();
+		
+/*		ArrayList<Node> initialList = topologicalSort(flowNetwork);
 		LinkedList<ArrayList<Node>> L = new LinkedList<ArrayList<Node>>();
 		L.add(initialList);
-
-
+		
+		
 		for (FlowEdge edgesFromS : flowNetwork.getSourceNode().getOutEdges()) {
-
+			
 			//TODO Transfer maximum capacity flow through (s,v) and update (v,s) accordingly
 			//TODO Update excess of v
 			System.out.println(edgesFromS.toString());
 		}
-
-
+ 
 		// TODO while(node is active) ==> Discharge
-
+		
 		// TODO Update tree
-
-		return null;
+		
+		return null;*/
 	}
 
 
@@ -503,9 +508,6 @@ public class GoldbergRao {
 			return 1;
 		}
 	}
-
-
-
 
 	private static boolean isSpecialEdge(FlowEdge flowEdge, double delta) {
 
