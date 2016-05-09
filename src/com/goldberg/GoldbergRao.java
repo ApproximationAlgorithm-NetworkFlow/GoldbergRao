@@ -120,12 +120,14 @@ public class GoldbergRao {
 			double delta = Math.ceil(F/carat);
 			updateDistanceLabels(delta, flowNetwork);
 			ArrayList<ArrayList<Node>> stronglyConnectedComponents = findStronglyConnectedComponents(flowNetwork);
-			//TODO : Implement
 			HashMap<Integer, ArrayList<Node>> superNodeToSCCMap = contractStronglyConnectedComponents(stronglyConnectedComponents);
-			routingFlow(superNodeToSCCMap, flowNetwork, delta);
 			golbergTarjanBlockingFlow(flowNetwork);
-			updateF(F, flowNetwork);
+			routingFlow(superNodeToSCCMap, flowNetwork, delta);
+			//TODO Scale
+			F = updateF(F, flowNetwork);
 		}
+		
+		//TODO return flow
 		return null;
 	}
 
@@ -354,25 +356,6 @@ public class GoldbergRao {
 		}
 	}
 
-
-
-
-	/*	We have a value i for the current distance label we are assigning to nodes.
-	We initialize i to 0. We keep two queues. One with nodes we should assign
-	i to called 'the current-queue' and one with nodes we should assign i + 1 to
-	called 'the next-queue'. Whenever we process a node v, we look at all its
-	incoming edges. If the edge (w; v) has positive residual capacity we calculate
-	the length of the edge using `. If the length of (w; v) is zero we add node
-	w to the current-queue, otherwise we add it to the next-queue. Whenever
-	a node has been fully processed we get the next node to process from the
-	current-queue. When the current-queue is empty we increase i by one and
-	use the next-queue as the the current-queue and vice versa. We start this
-	method by processing the target node, and are done when both queues are
-	empty.
-	To prevent us from processing the same node several times we reset the
-	distance label of each node in the graph to 1 before we process them. Then
-	we can recognize whether a node has been processed by looking at its label.
-	 */	
 	private static void updateDistanceLabels(double delta, FlowNetwork flowNetwork) {
 		int i = 0;
 		LinkedList<Node> currentQueue = new LinkedList<Node>();
@@ -385,10 +368,11 @@ public class GoldbergRao {
 		while(!currentQueue.isEmpty() || !nextQueue.isEmpty()) {
 			while (currentQueue.isEmpty() == false) {
 				Node v = currentQueue.pop();
+				//Process nodes which have not been processed only
 				v.setDist(i);
 				for (FlowEdge incomingEdge : v.getInEdges()) {
 					Node w = incomingEdge.getFromNode();
-					if(incomingEdge.getResidualCapacity() > 0){
+					if(w.getDist() == Integer.MAX_VALUE && incomingEdge.getResidualCapacity() > 0){
 						int l = binaryLength(w, v, delta, flowNetwork);
 						if (l == 0) {
 							currentQueue.add(w);
@@ -436,30 +420,12 @@ public class GoldbergRao {
 			edge.updateFlow(0);
 		}
 		GoldbergTarjanBlockingFlow blockingFlow = new GoldbergTarjanBlockingFlow(flowNetwork.getSourceNode());
+		//TODO Should return some flow
 		blockingFlow.discharge();
-		
-/*		ArrayList<Node> initialList = topologicalSort(flowNetwork);
-		LinkedList<ArrayList<Node>> L = new LinkedList<ArrayList<Node>>();
-		L.add(initialList);
-		
-		
-		for (FlowEdge edgesFromS : flowNetwork.getSourceNode().getOutEdges()) {
-			
-			//TODO Transfer maximum capacity flow through (s,v) and update (v,s) accordingly
-			//TODO Update excess of v
-			System.out.println(edgesFromS.toString());
-		}
- 
-		// TODO while(node is active) ==> Discharge
-		
-		// TODO Update tree
-		
-		return null;*/
 	}
 
 
 	private static void dfs(FlowNetwork flowNetwork, HashMap<Node, Boolean> markedNodesMap, ArrayList<Node> sortedList, Node node) {
-		//used[u] = true;
 		markedNodesMap.remove(node);
 		markedNodesMap.put(node, true);
 		for (FlowEdge edge : node.getOutEdges())
@@ -492,7 +458,6 @@ public class GoldbergRao {
 
 
 	private static int binaryLength(Node fromNode, Node toNode, double delta, FlowNetwork flowNetwork) throws IllegalArgumentException {
-		//FlowEdge edge = flowNetwork.getEdge(from, to);
 
 		FlowEdge flowEdge = null;
 		for (FlowEdge edge : fromNode.getOutEdges()) {

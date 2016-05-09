@@ -24,28 +24,7 @@ public class FlowEdge {
 		this.capacity = capacity;
 		this.flow = flow;
 	}
-	/*
-	public int other(int vertex) {
-		if (vertex == fromNode)
-			return toNode;
-		else if (vertex == toNode)
-			return fromNode;
-		else
-			throw new RuntimeException("endpoint not correct");
-	}
-
-	
-
-	public void addResidualFlowTo(int vertex, double delta) {
-		if (vertex == fromNode)
-			flow -= delta;
-		else if (vertex == toNode)
-			flow += delta;
-		else
-			throw new IllegalArgumentException();
-	}
-	 */
-	
+		
 	public void updateFlow(int flow) {
 		this.flow += flow; 
 		updateResidualCapacity(this.flow);
