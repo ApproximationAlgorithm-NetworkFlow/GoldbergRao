@@ -7,7 +7,7 @@ public class Node {
 	private boolean isBlocked = false;
 	private ArrayList<FlowEdge> outEdges = new ArrayList<>();
 	private ArrayList<FlowEdge> inEdges = new ArrayList<>();
-	private int excess = Integer.MAX_VALUE;
+	private int excess = 0;
 	private int dist = Integer.MAX_VALUE;
 	private int label=0;
 

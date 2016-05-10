@@ -415,13 +415,22 @@ public class GoldbergRao {
 	}
 
 	private static void golbergTarjanBlockingFlow(FlowNetwork flowNetwork) {
-		
+		/*
 		for (FlowEdge edge : flowNetwork.edges()) {
-			edge.updateFlow(0);
-		}
+			
+			//Saturate edges from source. Update the rest of the edges to be 0.
+			if(edge.getFromNode() == flowNetwork.getSourceNode()) {
+				int capacity = edge.getCapacity();
+				edge.updateFlow(capacity);
+				edge.getToNode().setExcess(capacity);
+			} else {
+				edge.updateFlow(0);
+			}
+			 
+		}*/
 		GoldbergTarjanBlockingFlow blockingFlow = new GoldbergTarjanBlockingFlow(flowNetwork.getSourceNode());
 		//TODO Should return some flow
-		blockingFlow.discharge();
+		blockingFlow.discharge(flowNetwork);
 	}
 
 

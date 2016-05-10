@@ -5,12 +5,15 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 
+import com.sun.org.apache.regexp.internal.recompile;
+
 public class FlowNetwork {
 	private int V;
 	private int E;
 	private int U = Integer.MIN_VALUE;
 	//SrcNode to Edge Map
-	private HashMap<Node, FlowEdge> edgeToIdMap = new HashMap<Node, FlowEdge>();
+	private HashMap<Node, ArrayList<FlowEdge>> edgeToIdMap = new HashMap<Node, ArrayList<FlowEdge>>();
+	private HashSet<FlowEdge> edges = new HashSet<FlowEdge>();
 	private HashSet<Node> nodes = new HashSet<Node>();
 	private Node sourceNode;
 	private Node sinkNode;
@@ -28,7 +31,16 @@ public class FlowNetwork {
 		nodes.add(e.getToNode());
 		e.getFromNode().addOutEdge(e);
 		e.getToNode().addInEdge(e);
-		edgeToIdMap.put(e.getFromNode(), e);
+		if(edgeToIdMap.containsKey(e.getFromNode())) {
+			ArrayList<FlowEdge> edges = edgeToIdMap.get(e.getFromNode());
+			edges.add(e);
+			edgeToIdMap.put(e.getFromNode(), edges);
+		} else {
+			ArrayList<FlowEdge> edges = new ArrayList<FlowEdge>();
+			edges.add(e);
+			edgeToIdMap.put(e.getFromNode(), edges);
+		}
+		edges.add(e);
 		e.updateFlow(0);
 		
 		if(e.getCapacity() > this.U) {
@@ -50,11 +62,7 @@ public class FlowNetwork {
 	 * 
 	 */
 	public Collection<FlowEdge> edges() {
-		ArrayList<FlowEdge> list = new ArrayList<FlowEdge>();
-		for(FlowEdge flowEdge : edgeToIdMap.values()){
-			list.add(flowEdge);
-		}
-		return list;
+		return this.edges;
 	}
 
 	public Collection<Node> getNodes() {
