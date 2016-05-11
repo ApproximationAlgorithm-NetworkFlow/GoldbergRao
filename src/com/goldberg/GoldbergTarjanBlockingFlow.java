@@ -22,7 +22,7 @@ public class GoldbergTarjanBlockingFlow {
 		//flowNetwork.getSourceNode().setDist(flowNetwork.getV());
 		for (Node node : flowNetwork.getNodes()) {
 			nodeToCurrentEdgePointer.put(node, 0);
-			node.setLabel(0);
+			//node.setLabel(0);
 			node.setExcess(0);
 		}
 		
@@ -40,7 +40,7 @@ public class GoldbergTarjanBlockingFlow {
 			}
 		}	
 		
-		flowNetwork.getSourceNode().setLabel(flowNetwork.getV());
+	//	flowNetwork.getSourceNode().setLabel(flowNetwork.getV());
 
 		while (!fifoQueue.isEmpty()) {
 			discharge(nodeToCurrentEdgePointer, flowNetwork.getSinkNode());
@@ -74,23 +74,23 @@ public class GoldbergTarjanBlockingFlow {
 
 			if (e.getResidualCapacity() > 0)
 			{
-				if (minLabel > e.getToNode().getLabel() || minLabel == -1) {
+				if (minLabel > e.getToNode().getDist() || minLabel == -1) {
 					minEdge = e;
-					minLabel = e.getToNode().getLabel();
+					minLabel = e.getToNode().getDist();
 				}
 			}
 		}
 		
 		for (FlowEdge e : node.getInEdges()) {
 			if (e.getResidualCapacity() == 0) {
-				if (minLabel > e.getFromNode().getLabel() || minLabel == -1) {
-					minLabel = e.getFromNode().getLabel();
+				if (minLabel > e.getFromNode().getDist() || minLabel == -1) {
+					minLabel = e.getFromNode().getDist();
 					minEdge = e;
 				}
 			}
 		}
 		int label = minLabel+binaryLength(minEdge, delta, flowNetwork);
-		node.setLabel(label);
+		node.setDist(label);
 		//	node.setLabel(minLabel+1);
 	}
 	public void pushRelabel(Node v, HashMap<Node,Integer> nodeToCurrentEdgePointer){
@@ -105,7 +105,7 @@ public class GoldbergTarjanBlockingFlow {
 			u = edge.getFromNode();
 		}
 			
-		if( v.getExcess() > 0 && (v.getLabel() == (u.getLabel() + binaryLength(edge, this.delta, this.flowNetwork))) && 
+		if( v.getExcess() > 0 && (v.getDist() == (u.getDist() + binaryLength(edge, this.delta, this.flowNetwork))) && 
 				((edge.getFromNode() == v && edge.getResidualCapacity() > 0) || 
 						(edge.getToNode() == v && edge.getResidualCapacity() == 0) )) {
 				if(edge.getToNode() == v) {
@@ -146,9 +146,9 @@ public class GoldbergTarjanBlockingFlow {
 	public void discharge(HashMap<Node,Integer> nodeToCurrentEdgePointer, Node target){
 
 		Node v = fifoQueue.pop();
-		int dist = v.getLabel();
+		int dist = v.getDist();
 		while(true){
-			dist = v.getLabel();
+			dist = v.getDist();
 			int currentPointer = nodeToCurrentEdgePointer.get(v);
 			ArrayList<FlowEdge> edges = new ArrayList<FlowEdge>(); 
 			edges.addAll(v.getOutEdges());
@@ -173,7 +173,7 @@ public class GoldbergTarjanBlockingFlow {
 				}
 
 				//}
-				if(v.getExcess() == 0 || v.getLabel() > dist || v == target) {
+				if(v.getExcess() == 0 || v.getDist() > dist || v == target) {
 					break;
 				}
 			} 

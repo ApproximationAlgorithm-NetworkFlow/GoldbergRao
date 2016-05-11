@@ -137,14 +137,14 @@ public class GoldbergRao {
 		
 		Node source = flowNetwork.getSourceNode();
 		
-		int[] canonicalCut = new int[source.getDist()];
+		int[] canonicalCut = new int[source.getDist() + 1];
 		Arrays.fill(canonicalCut, Integer.MAX_VALUE);
 		
 		for (FlowEdge edge : flowNetwork.edges()) {
 			Node v = edge.getFromNode();
 			Node w = edge.getToNode();
 			if (v.getDist() > w.getDist()) {
-				canonicalCut[v.getDist()] = edge.getResidualCapacity();
+				canonicalCut[v.getDist()-1] = edge.getResidualCapacity();
 			}		
 			
 		}
