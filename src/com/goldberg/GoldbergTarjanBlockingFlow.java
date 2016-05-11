@@ -8,81 +8,23 @@ public class GoldbergTarjanBlockingFlow {
 
 	private static LinkedList<Node> fifoQueue = new LinkedList<Node>();
 	private static final int Infinite = Integer.MAX_VALUE;
-	public GoldbergTarjanBlockingFlow(Node source){
-		//fifoQueue.add(source);
+	public FlowNetwork flowNetwork;
+	public double delta;
+	public GoldbergTarjanBlockingFlow(FlowNetwork flowNetwork, double delta) {
+		this.flowNetwork = flowNetwork;
+		this.delta = delta;
 	}
-	public static void push(FlowEdge edge){
-		int flowAmt = Math.min(edge.getFromNode().getExcess(), edge.getResidualCapacity());
-		edge.getToNode().setExcess(edge.getToNode().getExcess()+flowAmt);
-		edge.getFromNode().setExcess(edge.getFromNode().getExcess()-flowAmt);
-		//Update flow does current flow + flow Amt and then updatesResidualCapacity()
-		edge.updateFlow(flowAmt);
-		//edge.setResidualCapacity(edge.getCapacity()-edge.getFlow());
-		//return flowAmt;
-	}
-	public static void relabel(Node node){
-		int minLabel = -1;
-		ArrayList<FlowEdge> neighbors=node.getOutEdges();
-		for (FlowEdge e : neighbors) {
-
-			if (e.getResidualCapacity() > 0)
-			// && e.getFromNode().getDist() <= e.getToNode().getDist())
-			{
-				if (minLabel > e.getToNode().getDist() || minLabel == -1) {
-					minLabel = e.getToNode().getDist();
-				}
-			}
-		}
-		if(minLabel != -1){
-			node.setDist(minLabel+1);
-		} 
-	//	node.setLabel(minLabel+1);
-	}
-	public static void pushRelabel(Node v, HashMap<Node,Integer> nodeToCurrentEdgePointer){
-		int currentEdge = nodeToCurrentEdgePointer.get(v);
-		ArrayList<FlowEdge> edgeList = v.getOutEdges();
+	
+	public int maxFlow(FlowNetwork flowNetwork) {
 		
+		HashMap<Node, Integer> nodeToCurrentEdgePointer = new HashMap<Node, Integer>();
 		//TODO Verify
-		//while(true) {
-			FlowEdge edge = edgeList.get(currentEdge);
-			Node u = edge.getToNode();
-			if( v.getExcess() > 0 && edge.getResidualCapacity() >0 && v.getDist() == (u.getDist() + 1)) {
-				push(edge);
-			} else {
-				if (currentEdge != (edgeList.size() -1) ) {
-					currentEdge++;
-				} else {
-					currentEdge = 0;
-					if(v.getExcess() > 0) {
-						relabel(v);
-					}
-			//		break;
-				}
-				nodeToCurrentEdgePointer.put(v, currentEdge);
-				
-			}
-		//}
-		
-		
-		
-		/*for(FlowEdge e: v.getOutEdges()){
-			count++;
-			Node u = e.getToNode();
-			if(u.getExcess()>0 && v.getDist() == (u.getDist() + 1)){
-				push(e);
-			}
-			//check if e is the last edge
-			else {
-				if(count != v.getOutEdges().size())
-					continue;
-				else
-					relabel(v);
-				break;
-			}
-		}*/
-
-	}
-	public void discharge(FlowNetwork flowNetwork){
+		//flowNetwork.getSourceNode().setDist(flowNetwork.getV());
+		for (Node node : flowNetwork.getNodes()) {
+			nodeToCurrentEdgePointer.put(node, 0);
+			node.setLabel(0);
+			node.setExcess(0);
+		}
 		
 		for (FlowEdge edge : flowNetwork.edges()) {
 			//Saturate edges from source. Update the rest of the edges to be 0.
@@ -97,37 +39,181 @@ public class GoldbergTarjanBlockingFlow {
 				edge.updateFlow(0);
 			}
 		}	
-		HashMap<Node, Integer> nodeToCurrentEdgePointer = new HashMap<Node, Integer>();
-		for (Node node : flowNetwork.getNodes()) {
-			nodeToCurrentEdgePointer.put(node, 0);
+		
+		flowNetwork.getSourceNode().setLabel(flowNetwork.getV());
+
+		while (!fifoQueue.isEmpty()) {
+			discharge(nodeToCurrentEdgePointer, flowNetwork.getSinkNode());
 		}
+		return flowNetwork.getSinkNode().getExcess();
 
+		
+	}
+	public static void push(FlowEdge edge, boolean isReverse){
+		if(isReverse) {
+			int flowAmt = Math.min(edge.getToNode().getExcess(), edge.getFlow());
+			edge.getToNode().setExcess(edge.getToNode().getExcess()-flowAmt);
+			edge.getFromNode().setExcess(edge.getFromNode().getExcess()+flowAmt);
+			edge.updateFlow(-flowAmt);
+		}else{
+			int flowAmt = Math.min(edge.getFromNode().getExcess(), edge.getResidualCapacity());
+			edge.getToNode().setExcess(edge.getToNode().getExcess()+flowAmt);
+			edge.getFromNode().setExcess(edge.getFromNode().getExcess()-flowAmt);
+			//Update flow does current flow + flow Amt and then updatesResidualCapacity()
+			edge.updateFlow(flowAmt);
+		}
+		//edge.setResidualCapacity(edge.getCapacity()-edge.getFlow());
+		//return flowAmt;
+	}
+	public void relabel(Node node){
+		int minLabel = -1;
+		ArrayList<FlowEdge> neighbors=node.getOutEdges();
+		FlowEdge minEdge = null;
+		
+		for (FlowEdge e : neighbors) {
 
-		while (fifoQueue.isEmpty() == false) {
+			if (e.getResidualCapacity() > 0)
+			{
+				if (minLabel > e.getToNode().getLabel() || minLabel == -1) {
+					minEdge = e;
+					minLabel = e.getToNode().getLabel();
+				}
+			}
+		}
+		
+		for (FlowEdge e : node.getInEdges()) {
+			if (e.getResidualCapacity() == 0) {
+				if (minLabel > e.getFromNode().getLabel() || minLabel == -1) {
+					minLabel = e.getFromNode().getLabel();
+					minEdge = e;
+				}
+			}
+		}
+		int label = minLabel+binaryLength(minEdge, delta, flowNetwork);
+		node.setLabel(label);
+		//	node.setLabel(minLabel+1);
+	}
+	public void pushRelabel(Node v, HashMap<Node,Integer> nodeToCurrentEdgePointer){
+		int currentEdge = nodeToCurrentEdgePointer.get(v);
+		ArrayList<FlowEdge> edgeList = new ArrayList<FlowEdge>();
+		edgeList.addAll(v.getOutEdges());
+		edgeList.addAll(v.getInEdges());
 
-			Node v = fifoQueue.pop();
-			int dist = v.getDist();
-			do {
-				dist = v.getDist();
-				int currentPointer = nodeToCurrentEdgePointer.get(v);
-				FlowEdge edge = v.getOutEdges().get(currentPointer);
-				int oldResCapacity = edge.getResidualCapacity();
+		FlowEdge edge = edgeList.get(currentEdge);
+		Node u = edge.getToNode();
+		if(edge.getToNode() == v) {
+			u = edge.getFromNode();
+		}
+			
+		if( v.getExcess() > 0 && (v.getLabel() == (u.getLabel() + binaryLength(edge, this.delta, this.flowNetwork))) && 
+				((edge.getFromNode() == v && edge.getResidualCapacity() > 0) || 
+						(edge.getToNode() == v && edge.getResidualCapacity() == 0) )) {
+				if(edge.getToNode() == v) {
+					push(edge, true);
+				} else {
+					push(edge, false);
+				}
 				
+		} else {
+			if (currentEdge != (edgeList.size() -1) ) {
+				currentEdge++;
+			} else {
+				currentEdge = 0;
+				boolean eligibleForRelabel = false;
+				if(v.getExcess() > 0) {
+					for (FlowEdge e : v.getOutEdges()) {
+						if (e.getResidualCapacity() > 0) {
+							eligibleForRelabel = true;
+							break;
+						}
+					}
+					for (FlowEdge e : v.getInEdges()) {
+						if (e.getResidualCapacity() == 0) {
+							eligibleForRelabel = true;
+							break;
+						}
+					}
+					if(eligibleForRelabel) {
+						relabel(v);
+					}
+				}
+			}
+			nodeToCurrentEdgePointer.put(v, currentEdge);
+
+		}
+	}
+	
+	public void discharge(HashMap<Node,Integer> nodeToCurrentEdgePointer, Node target){
+
+		Node v = fifoQueue.pop();
+		int dist = v.getLabel();
+		while(true){
+			dist = v.getLabel();
+			int currentPointer = nodeToCurrentEdgePointer.get(v);
+			ArrayList<FlowEdge> edges = new ArrayList<FlowEdge>(); 
+			edges.addAll(v.getOutEdges());
+			edges.addAll(v.getInEdges());
+			FlowEdge edge = null;
+			if(edges != null && !edges.isEmpty()){
+				edge = edges.get(currentPointer);
+
+				int oldResCapacity = edge.getResidualCapacity();
+
 				pushRelabel(v, nodeToCurrentEdgePointer);
 				Node w = edge.getToNode();
+				if(edge.getToNode() == v) {
+					w = edge.getFromNode();
+				}
 				//for (FlowEdge e : v.getOutEdges()) {
 				//Node w = e.getToNode();
 				//Checks if push was performed and if  w is active aftet the push
+				// 
 				if (edge.getResidualCapacity() != oldResCapacity && w.getExcess() > 0) {
 					fifoQueue.add(w);
 				}
+
 				//}
-
-			} while (v.getExcess() != 0 && v.getDist() < dist);
-
-			if (v.getExcess() > 0) {
-				fifoQueue.add(v);
-			}
+				if(v.getExcess() == 0 || v.getLabel() > dist || v == target) {
+					break;
+				}
+			} 
+		}
+		if (v.getExcess() > 0 && v != target) {
+			fifoQueue.add(v);
 		}
 	}
+
+	private int binaryLength(FlowEdge edge, double delta, FlowNetwork flowNetwork) throws IllegalArgumentException {
+
+		if (edge.getResidualCapacity() >= (3*delta) || isSpecialEdge(edge, delta)) {
+			return 0;
+		} else {
+			return 1;
+		}
+	}
+	
+	private boolean isSpecialEdge(FlowEdge flowEdge, double delta) {
+
+		if(2*delta <= flowEdge.getResidualCapacity() &&  flowEdge.getResidualCapacity() > 3*delta) {
+
+			FlowEdge backEdge = null;
+
+			Node v = flowEdge.getFromNode();
+			Node w = flowEdge.getToNode();
+
+			for (FlowEdge edge : w.getOutEdges()) {
+				if(edge.getToNode() == v) {
+					backEdge = edge;
+					break;
+				}
+			}
+
+			if ((backEdge.getResidualCapacity() >= (3*delta)) && (v.getDist() == w.getDist())) {
+				return true;
+			}
+
+		}
+		return false;
+	}
+	
 }

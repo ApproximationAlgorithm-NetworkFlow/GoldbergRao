@@ -121,7 +121,8 @@ public class GoldbergRao {
 			updateDistanceLabels(delta, flowNetwork);
 			ArrayList<ArrayList<Node>> stronglyConnectedComponents = findStronglyConnectedComponents(flowNetwork);
 			HashMap<Integer, ArrayList<Node>> superNodeToSCCMap = contractStronglyConnectedComponents(stronglyConnectedComponents);
-			golbergTarjanBlockingFlow(flowNetwork);
+			int flow = golbergTarjanBlockingFlow(flowNetwork, delta);
+			System.out.println("Flow: " + flow +" ------------ Delta" + delta);
 			routingFlow(superNodeToSCCMap, flowNetwork, delta);
 			//TODO Scale
 			F = updateF(F, flowNetwork);
@@ -254,7 +255,7 @@ public class GoldbergRao {
 			Node w = queue.pop();
 			for (FlowEdge inEdge : w.getInEdges()) {
 				Node u = inEdge.getFromNode();
-				if(scc.contains(u) && binaryLength(u, w, delta, flowNetwork) == 0) {
+				if(scc.contains(u) && binaryLength(inEdge, delta, flowNetwork) == 0) {
 					if(u.getInTreeParent() == null) {
 						u.setInTreeParent(w);
 						w.addToInTree(u);
@@ -273,7 +274,7 @@ public class GoldbergRao {
 			Node w = queue.pop();
 			for (FlowEdge outEdge : w.getOutEdges()) {
 				Node u = outEdge.getFromNode();
-				if(scc.contains(u) && binaryLength(u, w, delta, flowNetwork) == 0) {
+				if(scc.contains(u) && binaryLength(outEdge, delta, flowNetwork) == 0) {
 					if(u.getOutTreeParent() == null) {
 						u.setOutTreeParent(w);
 						w.addToOutTree(u);
@@ -414,7 +415,7 @@ public class GoldbergRao {
 
 	}
 
-	private static void golbergTarjanBlockingFlow(FlowNetwork flowNetwork) {
+	private static int golbergTarjanBlockingFlow(FlowNetwork flowNetwork, double delta) {
 		/*
 		for (FlowEdge edge : flowNetwork.edges()) {
 			
@@ -428,9 +429,13 @@ public class GoldbergRao {
 			}
 			 
 		}*/
-		GoldbergTarjanBlockingFlow blockingFlow = new GoldbergTarjanBlockingFlow(flowNetwork.getSourceNode());
+		GoldbergTarjanBlockingFlow goldbergTarjanBlockingFlow = new GoldbergTarjanBlockingFlow(flowNetwork, delta);
+		int blockingFlow = goldbergTarjanBlockingFlow.maxFlow(flowNetwork);
+		//int blockingFlow = GoldbergTarjanBlockingFlow.maxFlow(flowNetwork);
+		//blockingFlow = new GoldbergTarjanBlockingFlow(flowNetwork);
 		//TODO Should return some flow
-		blockingFlow.discharge(flowNetwork);
+		//blockingFlow.discharge(flowNetwork);
+		return blockingFlow;
 	}
 
 
@@ -466,6 +471,17 @@ public class GoldbergRao {
 
 
 
+	private static int binaryLength(FlowEdge edge, double delta, FlowNetwork flowNetwork) throws IllegalArgumentException {
+
+		if (edge.getResidualCapacity() >= (3*delta) || isSpecialEdge(edge, delta)) {
+			return 0;
+		} else {
+			return 1;
+		}
+	}
+
+	
+
 	private static int binaryLength(Node fromNode, Node toNode, double delta, FlowNetwork flowNetwork) throws IllegalArgumentException {
 
 		FlowEdge flowEdge = null;
@@ -476,7 +492,8 @@ public class GoldbergRao {
 			}
 		}
 
-		if (flowEdge.getResidualCapacity() >= 3*delta || isSpecialEdge(flowEdge, delta)) {
+		if (flowEdge.getResidualCapacity() >= (3*delta)){ 
+				//|| isSpecialEdge(flowEdge, delta)) {
 			return 0;
 		} else {
 			return 1;
